@@ -25,12 +25,14 @@ consoleInfo struct;https://msdn.microsoft.com/en-us/library/windows/desktop/ms68
 consoleInfo ends
 consoleInfoInstance consoleInfo {}
 .code
-setup: call AllocConsole@0
+setup: push ebp
+mov ebp, esp
+call AllocConsole@0
 push -11
 call GetStdHandle@4
 mov dword ptr consoleHandle, eax
 push OFFSET consoleInfoInstance
-push eax
+push dword ptr consoleHandle
 call GetConsoleScreenBufferInfo@8
 predraw: 
 mov eax, dword ptr currentBottomLine
@@ -40,9 +42,8 @@ sub dword ptr screenBufferOffset, ecx
 draweert:
 push eax
 mov ecx, eax
-mov edx, 90
-mul edx
-add eax, OFFSET screenbuffer
+push eax
+call getBufferElement
 push OFFSET lengthofwrite
 add ecx, screenBufferOffset
 cmp ecx, 54
@@ -54,8 +55,7 @@ xor ebx, ebx
 mov bx, 90
 push ebx
 push eax
-mov ecx, dword ptr consoleHandle
-push ecx
+push dword ptr consoleHandle
 call WriteConsoleOutputCharacterA@20
 pop eax
 sub eax, 1
@@ -74,5 +74,17 @@ jle resetDrawer
 jmp predraw
 resetDrawer: mov currentBottomLine, 54
 jmp predraw
+pop ebp
 ret
+getBufferElement:
+push ebp
+mov ebp, esp
+mov eax, [ebp + 8]
+mov edx, 90
+mul edx
+add eax, OFFSET screenbuffer
+pop ebp
+ret 4
+getWrittingCords:
+
 end setup
