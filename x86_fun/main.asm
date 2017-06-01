@@ -12,8 +12,10 @@ extern Sleep@4:PROC
 .data
 lengthofwrite dword ?;dw is half the size of dword, lolwat
 consoleHandle dword ?
-screenbuffer BYTE 90 dup("!"), 54 dup(90 dup("~"));from bottom of screen up, cause it made looping easy
-currentBottomLine dword 54
+screenbuffer BYTE 90 dup("!"), 24 dup(90 dup("~"));from bottom of screen up, cause it made looping easy
+maxRow dword 24
+numberOfRows dword 25
+currentBottomLine dword 24
 screenBufferOffset dword 0
 ;this isnt used atm, but useful if we want to scale to console size
 consoleInfo struct;https://msdn.microsoft.com/en-us/library/windows/desktop/ms682093(v=vs.85).aspxBYTE
@@ -35,56 +37,72 @@ push OFFSET consoleInfoInstance
 push dword ptr consoleHandle
 call GetConsoleScreenBufferInfo@8
 predraw: 
-mov eax, dword ptr currentBottomLine
-mov screenBufferOffset, 54
+mov screenBufferOffset, 25;numberOfRows
 mov ecx, dword ptr currentBottomLine
 sub dword ptr screenBufferOffset, ecx
-draweert:
-push eax
-mov ecx, eax
-push eax
-call getBufferElement
-push OFFSET lengthofwrite
-add ecx, screenBufferOffset
-cmp ecx, 54
-jle blah
-sub ecx, 54
-blah: shl ecx, 16;move y cord into higher byte
-push ecx
-xor ebx, ebx
-mov bx, 90
-push ebx
-push eax
-push dword ptr consoleHandle
-call WriteConsoleOutputCharacterA@20
-pop eax
-sub eax, 1
-cmp eax, -1
-jne checkAgainstBottomLine
-mov eax, 54
-push eax
+push currentBottomLine
+call drawScreen
 push 100
 call Sleep@4
-pop eax
-checkAgainstBottomLine:
-cmp currentBottomLine, eax
-jne draweert
+push currentBottomLine
+call getBufferElement
 sub currentBottomLine, 1
-jle resetDrawer
-jmp predraw
-resetDrawer: mov currentBottomLine, 54
+jg dontresetDrawer
+mov currentBottomLine, 24;maxRow
+dontresetDrawer: 
 jmp predraw
 pop ebp
 ret
 getBufferElement:
-push ebp
-mov ebp, esp
-mov eax, [ebp + 8]
-mov edx, 90
-mul edx
-add eax, OFFSET screenbuffer
-pop ebp
-ret 4
+	push ebp
+	mov ebp, esp
+	mov eax, [ebp + 8]
+	mov edx, 90
+	mul edx
+	add eax, OFFSET screenbuffer
+	pop ebp
+	ret 4
 getWrittingCords:
-
+	push ebp
+	mov ebp, esp
+	mov eax, [ebp + 8]
+	add eax, screenBufferOffset;maybe make this a parameter
+	cmp eax, maxRow
+	jle within_limit
+	sub eax, numberOfRows
+	within_limit: shl eax, 16;move y cord into higher byte
+	pop ebp
+	ret 4
+moveCurrentLinePosition:
+	push ebp
+	mov ebp, esp
+	mov eax, [ebp + 8]
+	sub eax, 1
+	cmp eax, -1
+	jne dontreset
+	mov eax, maxRow
+	dontreset:
+	pop ebp
+	ret 4
+drawScreen:
+	push ebp
+	mov ebp, esp
+	nextLine:
+		push OFFSET lengthofwrite
+			push [ebp + 8]
+			call getWrittingCords
+		push eax
+		push 90
+			push [ebp + 8]
+			call getBufferElement
+		push eax
+		push dword ptr consoleHandle
+		call WriteConsoleOutputCharacterA@20
+		push [ebp + 8]
+		call moveCurrentLinePosition
+	mov [ebp + 8], eax
+	cmp currentBottomLine, eax
+	jne nextLine
+	pop ebp
+	ret 4
 end setup
