@@ -8,7 +8,6 @@ extern AllocConsole@0: PROC
 extern GetStdHandle@4: PROC
 extern WriteConsoleA@20: PROC
 extern GetConsoleScreenBufferInfo@8: PROC
-extern FillConsoleOutputCharacterA@20:PROC
 extern WriteConsoleOutputCharacterA@20:PROC
 extern LoadLibraryA@4:PROC
 extern GetProcAddress@8:PROC
@@ -18,7 +17,6 @@ extern ReadConsoleInputA@16:PROC
 extern Sleep@4:PROC
 ;extern rand: PROC
 extern FlushConsoleInputBuffer@4:PROC
-extern ReadConsoleA@20:PROC
 extern ReadConsoleOutputCharacterA@20:PROC
 extern MessageBoxA@16:PROC
 .data
@@ -37,15 +35,6 @@ randName BYTE "rand",0
 srandName BYTE "srand",0
 randAddress dword ?
 srandAddress dword ?
-;this isnt used atm, but useful if we want to scale to console size
-consoleInfo struct;https://msdn.microsoft.com/en-us/library/windows/desktop/ms682093(v=vs.85).aspx
-	windowSize word 2 DUP(?)
-	cursorPosition word 2 DUP(?)
-	attritubes word ?
-	window word 4 DUP(?)
-	maxWindowSize word 2 DUP(?)
-consoleInfo ends
-consoleInfoInstance consoleInfo {}
 inputRecord struct
 	eventType word ?
 	bKeyDown dword ?
@@ -54,7 +43,7 @@ inputRecord struct
 	wVirtualScanCode WORD ? 
 	AsciiChar byte ?
 	dwControlKeyState DWORD ? 
-	extraspace byte 50 dup(?);hack incase I fuck up the type
+	extraspace byte 50 dup(?);hack incase I fuck up the type size
 inputRecord ends
 inputRecordInstances inputRecord {}
 ;for character
@@ -74,9 +63,6 @@ call AllocConsole@0
 push -11
 call GetStdHandle@4
 mov dword ptr consoleHandle, eax
-push OFFSET consoleInfoInstance
-push dword ptr consoleHandle
-call GetConsoleScreenBufferInfo@8
 push -10
 call GetStdHandle@4
 mov dword ptr consoleInputHandle, eax
